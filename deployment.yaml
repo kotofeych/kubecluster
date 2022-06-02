@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-projectname
+  labels:
+    app: test-projectname
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-projectname
+  template:
+    metadata:
+      labels:
+        app: test-projectname
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: test-projectname
+        - maxSkew: 1
+          topologyKey: node
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: test-projectname
+      imagePullSecrets:
+        - name: imagePullSecrets
+      containers:
+        - name: test-projectname
+          image: django
+          imagePullPolicy: IfNotPresent
+          command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            limits:
+              cpu: "1"
+              memory: "300Mi"
+            requests:
+              cpu: "150m"
+              memory: "150mi"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: zone
+                operator: Exists 
+
